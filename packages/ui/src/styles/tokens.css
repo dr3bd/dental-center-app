@@ -1,0 +1,26 @@
+:root {
+  --brand-600: #0f766e;
+  --brand-300: #5eead4;
+  --surface: #0b141a;
+  --surface-alt: #111b21;
+  --surface-light: #f9fafb;
+  --text-strong: #0b0f19;
+  --radius-12: 12px;
+  --gap-12: 12px;
+  --gap-24: 24px;
+  --shadow-card: 0 10px 30px rgba(15, 118, 110, 0.1);
+}
+
+[data-theme='dark'] {
+  --surface: #050a0e;
+  --surface-alt: #0f1419;
+  --surface-light: #111827;
+  --text-strong: #f8fafc;
+}
+
+body {
+  font-family: 'Cairo', 'Segoe UI', system-ui;
+  background: var(--surface-light);
+  color: var(--text-strong);
+  transition: background 0.3s ease, color 0.3s ease;
+}
