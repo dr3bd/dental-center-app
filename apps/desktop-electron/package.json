@@ -1,0 +1,23 @@
+{
+  "name": "dental-center-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:pwa\" \"npm:dev:electron\"",
+    "dev:pwa": "npm --workspace ../pwa run dev",
+    "dev:electron": "cross-env VITE_DEV_SERVER_URL=http://localhost:4173 electron .",
+    "build": "npm --workspace ../pwa run build && electron-builder",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@dental-center/core": "file:../../packages/core",
+    "cross-env": "7.0.3",
+    "electron": "30.0.8"
+  },
+  "devDependencies": {
+    "concurrently": "8.2.2",
+    "electron-builder": "24.13.3",
+    "typescript": "5.5.4"
+  }
+}
