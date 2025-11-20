@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+:root {
+  font-family: 'Cairo', system-ui;
+  color: var(--app-text, #0f172a);
+  background-color: var(--app-bg, #f5f7fb);
+  --app-bg: #f5f7fb;
+  --app-text: #0f172a;
+}
+
+[data-theme='dark'] {
+  --app-bg: #020617;
+  --app-text: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
