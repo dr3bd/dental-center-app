@@ -2,6 +2,7 @@ import { InventoryBatch, InventoryItem } from '../models';
 import { db } from '../repositories/inMemoryDatabase';
 import { ensureYer } from '../utils/currency';
 import { auditService } from './auditService';
+import { accountingService } from './accountingService';
 
 export class InventoryService {
   addItem(item: Omit<InventoryItem, 'id'>) {
@@ -20,6 +21,7 @@ export class InventoryService {
       createdAt: new Date().toISOString()
     };
     db.table('inventoryBatches').push(newBatch);
+    accountingService.postInventoryPurchase(newBatch.costYer);
     auditService.log('system', 'create', 'inventoryBatch', newBatch.id, newBatch);
     return newBatch;
   }
@@ -31,11 +33,14 @@ export class InventoryService {
     const batches = db.table('inventoryBatches').filter((b) => b.itemId === itemId);
     if (batches.length === 0) throw new Error('لا توجد دفعات للمادة');
     let remaining = qty;
+    let costUsed = 0;
     for (const batch of batches) {
       const available = batch.qtyIn - batch.qtyOut;
       if (available <= 0) continue;
       const take = Math.min(available, remaining);
       batch.qtyOut += take;
+      const unitCost = batch.costYer / batch.qtyIn;
+      costUsed += Math.round(unitCost * take);
       remaining -= take;
       if (remaining === 0) break;
     }
@@ -43,6 +48,7 @@ export class InventoryService {
       throw new Error('المخزون غير كافٍ');
     }
     auditService.log('system', 'update', 'inventoryBatch', itemId, { consumed: qty });
+    return costUsed;
   }
 
   listItems() {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  accountingService,
   appointmentService,
   cashboxService,
   db,
@@ -114,5 +115,24 @@ describe('Dental Center Core Services', () => {
     const momentum = reportService.patientMomentum();
     expect(momentum.length).toBeGreaterThan(0);
     expect(momentum[0].sessions).toBeGreaterThanOrEqual(momentum[momentum.length - 1].sessions);
+  });
+
+  it('rejects unbalanced journal entries and exports accounting pack', () => {
+    expect(() =>
+      accountingService.recordEntry({
+        date: new Date().toISOString(),
+        memo: 'قيد غير متوازن',
+        source: 'test',
+        postedBy: 'tester',
+        lines: [
+          { accountId: 'acc-1000', debitYer: 1000, creditYer: 0 },
+          { accountId: 'acc-3000', debitYer: 0, creditYer: 500 }
+        ]
+      })
+    ).toThrowError();
+    const pack = accountingService.exportPack();
+    expect(pack.trial.balanced).toBe(true);
+    expect(pack.income.net).toBeDefined();
+    expect(pack.balance.totals.assets).toBeGreaterThan(0);
   });
 });

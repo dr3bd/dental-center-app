@@ -1,4 +1,21 @@
-import { Appointment, Doctor, InventoryBatch, InventoryItem, Invoice, LabOrder, Patient, PaymentVoucher, Receipt, Session, ToothStatus, PatientTooth, Supplier } from '../models';
+import {
+  Account,
+  Appointment,
+  Doctor,
+  InventoryBatch,
+  InventoryItem,
+  Invoice,
+  JournalEntry,
+  JournalLine,
+  LabOrder,
+  Patient,
+  PaymentVoucher,
+  Receipt,
+  Session,
+  ToothStatus,
+  PatientTooth,
+  Supplier
+} from '../models';
 import { LedgerEntry } from '../models';
 
 const now = new Date();
@@ -153,3 +170,80 @@ export const ledger: LedgerEntry[] = [
   { id: 'led-1', date: now.toISOString(), type: 'receipt', refId: 'rec-1', direction: 'in', amountYer: 25000, note: 'سند قبض 1' },
   { id: 'led-2', date: now.toISOString(), type: 'payment', refId: 'pay-1', direction: 'out', amountYer: 7000, note: 'سند دفع 1' }
 ];
+
+export const accounts: Account[] = [
+  { id: 'acc-1000', code: '1000', name: 'الصندوق', type: 'asset', isActive: true },
+  { id: 'acc-1100', code: '1100', name: 'ذمم المرضى', type: 'asset', isActive: true },
+  { id: 'acc-1200', code: '1200', name: 'المخزون الطبي', type: 'asset', isActive: true },
+  { id: 'acc-1300', code: '1300', name: 'دفعات المعامل', type: 'asset', isActive: true },
+  { id: 'acc-2000', code: '2000', name: 'ذمم الموردين', type: 'liability', isActive: true },
+  { id: 'acc-2100', code: '2100', name: 'مستحقات الأطباء', type: 'liability', isActive: true },
+  { id: 'acc-3000', code: '3000', name: 'الأرباح المحتجزة', type: 'equity', isActive: true },
+  { id: 'acc-3100', code: '3100', name: 'أرصدة افتتاحية', type: 'equity', isActive: true },
+  { id: 'acc-4000', code: '4000', name: 'إيرادات علاجية', type: 'revenue', isActive: true },
+  { id: 'acc-4100', code: '4100', name: 'إيرادات أخرى', type: 'revenue', isActive: true },
+  { id: 'acc-5000', code: '5000', name: 'مصاريف عيادية', type: 'expense', isActive: true },
+  { id: 'acc-5100', code: '5100', name: 'مصاريف مختبرات', type: 'expense', isActive: true },
+  { id: 'acc-5200', code: '5200', name: 'مصاريف عمولات أطباء', type: 'expense', isActive: true },
+  { id: 'acc-5900', code: '5900', name: 'مصاريف تشغيل أخرى', type: 'expense', isActive: true }
+];
+
+let journalCounter = 1;
+let journalLineCounter = 1;
+const jl = (accountId: string, debitYer: number, creditYer: number, memo?: string): JournalLine => ({
+  id: `jl-${journalLineCounter++}`,
+  accountId,
+  debitYer,
+  creditYer,
+  memo
+});
+
+const makeEntry = (memo: string, source: string, lines: JournalLine[], refId?: string, date = now.toISOString()): JournalEntry => ({
+  id: `je-${journalCounter++}`,
+  date,
+  memo,
+  source,
+  refId,
+  period: date.substring(0, 7),
+  postedBy: 'seed',
+  createdAt: date,
+  lines
+});
+
+const revenueEntries = invoices.map((invoice) => {
+  const session = sessions.find((s) => s.id === invoice.linkedSessionId);
+  const doctor = doctors.find((d) => d?.id === session?.doctorId);
+  const commission = doctor ? Math.round(invoice.totalYer * (doctor.revenueSharePercent / 100)) : 0;
+  return makeEntry(
+    `قيد فاتورة ${invoice.id}`,
+    'invoice',
+    [
+      jl('acc-1100', invoice.totalYer, 0, 'ذمم مرضى'),
+      jl('acc-4000', 0, invoice.totalYer, 'إيراد علاجي'),
+      jl('acc-5200', commission, 0, 'عمولة طبيب'),
+      jl('acc-2100', 0, commission, 'التزام للطبيب')
+    ],
+    invoice.id,
+    invoice.date
+  );
+});
+
+const receiptEntries = receipts.map((receipt) => {
+  const memo = receipt.invoiceId ? `تحصيل ${receipt.invoiceId}` : 'قبض نقدي مباشر';
+  const creditAccount = receipt.invoiceId ? 'acc-1100' : 'acc-4100';
+  return makeEntry(memo, 'receipt', [jl('acc-1000', receipt.amountYer, 0), jl(creditAccount, 0, receipt.amountYer)], receipt.invoiceId, receipt.date);
+});
+
+const paymentEntries = paymentVouchers.map((voucher) => {
+  const accountMap: Record<string, string> = {
+    'قوالب زركون': 'acc-5100',
+    كمبوزت: 'acc-5000',
+    تعقيم: 'acc-5900'
+  };
+  const expenseAccount = accountMap[voucher.reason] || 'acc-5900';
+  return makeEntry(`سند دفع ${voucher.payee}`, 'payment', [jl(expenseAccount, voucher.amountYer, 0), jl('acc-1000', 0, voucher.amountYer)], voucher.id, voucher.date);
+});
+
+const openingEntry = makeEntry('أرصدة افتتاحية', 'opening', [jl('acc-1000', 150000, 0), jl('acc-1200', 80000, 0), jl('acc-3100', 0, 230000)]);
+
+export const journalEntries: JournalEntry[] = [openingEntry, ...revenueEntries, ...receiptEntries, ...paymentEntries];

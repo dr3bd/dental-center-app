@@ -1,29 +1,29 @@
 import { db } from '../repositories/inMemoryDatabase';
+import { accountingService } from './accountingService';
 import { appointmentService } from './appointmentService';
 import { inventoryService } from './inventoryService';
 
 export class ReportService {
   incomeByPeriod(start: string, end: string) {
-    const s = new Date(start).getTime();
-    const e = new Date(end).getTime();
-    return db
-      .table('ledger')
-      .filter((entry) => entry.direction === 'in')
-      .filter((entry) => {
-        const ts = new Date(entry.date).getTime();
-        return ts >= s && ts <= e;
-      })
-      .reduce((sum, entry) => sum + entry.amountYer, 0);
+    const entries = db
+      .table('journalEntries')
+      .filter((entry) => entry.date >= start && entry.date <= end);
+    const accounts = db.table('accounts');
+    return entries.reduce((sum, entry) => {
+      const revenueLines = entry.lines.filter((line) => accounts.find((a) => a.id === line.accountId)?.type === 'revenue');
+      const entryRevenue = revenueLines.reduce((acc, line) => acc + (line.creditYer - line.debitYer), 0);
+      return sum + entryRevenue;
+    }, 0);
   }
 
   expenseByCategory() {
     const map = new Map<string, number>();
-    db
-      .table('paymentVouchers')
-      .forEach((voucher) => {
-        const key = voucher.reason || 'أخرى';
-        map.set(key, (map.get(key) || 0) + voucher.amountYer);
-      });
+    const accounts = db.table('accounts').filter((a) => a.type === 'expense');
+    const balances = accountingService.balances();
+    accounts.forEach((acc) => {
+      const total = balances.get(acc.id) || 0;
+      if (total > 0) map.set(acc.name, total);
+    });
     return Array.from(map.entries()).map(([category, total]) => ({ category, total }));
   }
 
@@ -40,10 +40,8 @@ export class ReportService {
   }
 
   cashBalance() {
-    const ledger = db.table('ledger');
-    return ledger.reduce((balance, entry) => {
-      return balance + (entry.direction === 'in' ? entry.amountYer : -entry.amountYer);
-    }, 0);
+    const balances = accountingService.balances();
+    return balances.get('acc-1000') || 0;
   }
 
   incomeTrend(days = 7) {
@@ -64,10 +62,11 @@ export class ReportService {
   }
 
   netAfterLabAndMaterials() {
-    const labCost = db.table('labOrders').reduce((sum, order) => sum + order.costYer, 0);
-    const materialCost = db.table('inventoryBatches').reduce((sum, batch) => sum + batch.costYer, 0);
-    const income = this.incomeByPeriod('1970-01-01', new Date().toISOString());
-    return { income, labCost, materialCost, net: income - (labCost + materialCost) };
+    const balances = accountingService.balances();
+    const income = accountingService.incomeStatement();
+    const labCost = balances.get('acc-5100') || 0;
+    const materialCost = balances.get('acc-5000') || 0;
+    return { income: income.revenue, labCost, materialCost, net: income.net };
   }
 
   invoiceAging() {

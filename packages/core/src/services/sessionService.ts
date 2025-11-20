@@ -3,6 +3,7 @@ import { db } from '../repositories/inMemoryDatabase';
 import { ensureYer } from '../utils/currency';
 import { auditService } from './auditService';
 import { inventoryService } from './inventoryService';
+import { accountingService } from './accountingService';
 
 export class SessionService {
   create(session: Omit<Session, 'id'>) {
@@ -27,11 +28,13 @@ export class SessionService {
   linkMaterials(sessionId: string, materialsJson: string) {
     try {
       const parsed: { itemId: string; qty: number }[] = JSON.parse(materialsJson);
+      let totalCost = 0;
       parsed.forEach((entry) => {
         if (entry.itemId && entry.qty) {
-          inventoryService.consume(entry.itemId, entry.qty);
+          totalCost += inventoryService.consume(entry.itemId, entry.qty) || 0;
         }
       });
+      accountingService.postInventoryConsumption(totalCost, sessionId);
     } catch (error) {
       throw new Error('صيغة المواد غير صحيحة');
     }

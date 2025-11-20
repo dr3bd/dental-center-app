@@ -16,6 +16,7 @@ import {
 } from '@dental-center/ui';
 import {
   appointmentService,
+  accountingService,
   auditService,
   backupService,
   cashboxService,
@@ -718,21 +719,151 @@ function SuppliersView({ version, refresh, onToast }: ViewProps) {
   );
 }
 
-function AccountingView({ version }: SimpleProps) {
-  const ledger = useMemo(() => [...db.table('ledger')].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [version]);
-  const cashBalance = useMemo(() => reportService.cashBalance(), [version]);
+function AccountingView({ version, onToast }: ViewProps) {
+  const [accountForm, setAccountForm] = useState({ code: '', name: '', type: 'asset' as const });
+  const coa = useMemo(() => accountingService.chartOfAccounts(), [version]);
+  const trial = useMemo(() => accountingService.trialBalance(), [version]);
+  const gl = useMemo(() => accountingService.generalLedger(), [version]);
+  const income = useMemo(() => accountingService.incomeStatement(), [version]);
+  const balance = useMemo(() => accountingService.balanceSheet(), [version]);
+  const cashFlow = useMemo(() => accountingService.cashFlow(), [version]);
+  const cashBalance = useMemo(() => accountingService.balances().get('acc-1000') || 0, [version]);
+  const ledgerRows = useMemo(
+    () =>
+      gl.flatMap((row) =>
+        row.lines.map((line, idx) => ({
+          id: `${row.id}-${idx}`,
+          account: row.account.name,
+          date: line.date,
+          memo: line.memo,
+          debitYer: line.debitYer,
+          creditYer: line.creditYer,
+          refId: line.refId,
+          source: line.source
+        }))
+      ),
+    [gl]
+  );
+
+  const addAccount = (event: FormEvent) => {
+    event.preventDefault();
+    accountingService.addAccount({ ...accountForm, isActive: true });
+    setAccountForm({ code: '', name: '', type: 'asset' });
+    onToast('تمت إضافة حساب جديد');
+  };
+
+  const closePeriod = (tag: 'month' | 'year') => {
+    const today = new Date();
+    const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    accountingService.closePeriod(period, tag, 'manager');
+    onToast(`تم إقفال الفترة ${period}`);
+  };
+
+  const exportJson = () => {
+    const pack = accountingService.exportPack();
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'accounting-pack.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <KPIWidget label="رصيد الخزنة" value={`${cashBalance} YER`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 12 }}>
+        <KPIWidget label="رصيد الخزنة" value={`${cashBalance} YER`} />
+        <KPIWidget label="التدفق النقدي الصافي" value={`${cashFlow.net} YER`} />
+        <KPIWidget label="صافي الدخل" value={`${income.net} YER`} />
+        <KPIWidget
+          label="ميزان المراجعة"
+          value={trial.balanced ? 'متوازن' : 'غير متوازن'}
+          badgeTone={trial.balanced ? 'success' : 'danger'}
+        />
+      </div>
+
+      <SmartForm onSubmit={addAccount}>
+        <label>
+          رقم الحساب
+          <input value={accountForm.code} onChange={(e) => setAccountForm({ ...accountForm, code: e.target.value })} required />
+        </label>
+        <label>
+          اسم الحساب
+          <input value={accountForm.name} onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })} required />
+        </label>
+        <label>
+          النوع
+          <select value={accountForm.type} onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value as any })}>
+            <option value="asset">أصل</option>
+            <option value="liability">التزام</option>
+            <option value="equity">حقوق ملكية</option>
+            <option value="revenue">إيراد</option>
+            <option value="expense">مصروف</option>
+          </select>
+        </label>
+        <button style={{ borderRadius: 12, border: 'none', background: '#0f766e', color: '#fff', padding: '10px 16px' }}>
+          إضافة حساب
+        </button>
+      </SmartForm>
+
       <DataTable
-        data={ledger}
+        data={coa.map((acc) => ({ ...acc, id: acc.id }))}
+        columns={[
+          { key: 'code', label: 'الكود' },
+          { key: 'name', label: 'اسم الحساب' },
+          { key: 'type', label: 'النوع' },
+          { key: 'isActive', label: 'الحالة', render: (row) => (row.isActive ? <Badge>نشط</Badge> : <Badge tone="danger">موقوف</Badge>) }
+        ]}
+        fileName="chart-of-accounts"
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 12 }}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: 12, boxShadow: 'var(--shadow-card)' }}>
+          <h3 style={{ marginTop: 0 }}>القوائم المالية</h3>
+          <p>الإيراد: {income.revenue} YER</p>
+          <p>المصروف: {income.expenses} YER</p>
+          <p>صافي الدخل: {income.net} YER</p>
+          <p>التدفق النقدي: {cashFlow.net} YER</p>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 16, padding: 12, boxShadow: 'var(--shadow-card)' }}>
+          <h3 style={{ marginTop: 0 }}>إقفال الفترات</h3>
+          <button onClick={() => closePeriod('month')} style={{ marginInlineEnd: 8, padding: '8px 12px' }}>
+            إقفال شهري
+          </button>
+          <button onClick={() => closePeriod('year')} style={{ padding: '8px 12px' }}>
+            إقفال سنوي
+          </button>
+          <button onClick={exportJson} style={{ marginInlineStart: 8, padding: '8px 12px' }}>
+            تصدير JSON/Excel
+          </button>
+        </div>
+      </div>
+
+      <DataTable
+        data={trial.rows.map((row, idx) => ({
+          id: `${row.id}-${idx}`,
+          account: `${row.account.code} - ${row.account.name}`,
+          debit: row.debit,
+          credit: row.credit
+        }))}
+        columns={[
+          { key: 'account', label: 'الحساب' },
+          { key: 'debit', label: 'مدين' },
+          { key: 'credit', label: 'دائن' }
+        ]}
+        fileName="trial-balance"
+      />
+
+      <DataTable
+        data={ledgerRows}
         columns={[
           { key: 'date', label: 'التاريخ', render: (row) => new Date(row.date).toLocaleString('ar-EG') },
-          { key: 'type', label: 'النوع' },
-          { key: 'direction', label: 'الاتجاه' },
-          { key: 'amountYer', label: 'المبلغ' }
+          { key: 'account', label: 'الحساب' },
+          { key: 'memo', label: 'الوصف' },
+          { key: 'debitYer', label: 'مدين' },
+          { key: 'creditYer', label: 'دائن' }
         ]}
-        fileName="ledger"
+        fileName="general-ledger"
       />
     </div>
   );
@@ -740,20 +871,18 @@ function AccountingView({ version }: SimpleProps) {
 
 function ReportsView({ version }: SimpleProps) {
   const netByDoctor = useMemo(() => reportService.netByDoctor(), [version]);
-  const ledger = useMemo(() => db.table('ledger'), [version]);
-  const monthlyRows = useMemo(() => {
-    const map = new Map<string, { income: number; expense: number }>();
-    ledger.forEach((entry) => {
-      const month = new Date(entry.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long' });
-      if (!map.has(month)) {
-        map.set(month, { income: 0, expense: 0 });
-      }
-      const bucket = map.get(month)!;
-      if (entry.direction === 'in') bucket.income += entry.amountYer;
-      else bucket.expense += entry.amountYer;
-    });
-    return Array.from(map.entries()).map(([period, value]) => ({ period, income: value.income, expense: value.expense, net: value.income - value.expense }));
-  }, [ledger]);
+  const trial = useMemo(() => accountingService.trialBalance(), [version]);
+  const income = useMemo(() => accountingService.incomeStatement(), [version]);
+  const balance = useMemo(() => accountingService.balanceSheet(), [version]);
+  const cash = useMemo(() => accountingService.cashFlow(), [version]);
+  const exportPack = () => {
+    const blob = new Blob([JSON.stringify(accountingService.exportPack(), null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'financials.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <ChartPanel
@@ -762,13 +891,51 @@ function ReportsView({ version }: SimpleProps) {
         labels={netByDoctor.map((item) => item.doctor)}
         datasets={[{ label: 'الصافي', data: netByDoctor.map((item) => item.net), backgroundColor: '#fde68a' }]}
       />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+        <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: 'var(--shadow-card)' }}>
+          <h4 style={{ margin: 0 }}>قائمة الدخل</h4>
+          <p>الإيرادات: {income.revenue} YER</p>
+          <p>المصروفات: {income.expenses} YER</p>
+          <p>الصافي: {income.net} YER</p>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: 'var(--shadow-card)' }}>
+          <h4 style={{ margin: 0 }}>المركز المالي</h4>
+          <p>الأصول: {balance.totals.assets} YER</p>
+          <p>الخصوم: {balance.totals.liabilities} YER</p>
+          <p>حقوق الملكية: {balance.totals.equity} YER</p>
+        </div>
+        <div style={{ background: '#fff', borderRadius: 12, padding: 12, boxShadow: 'var(--shadow-card)' }}>
+          <h4 style={{ margin: 0 }}>التدفق النقدي</h4>
+          <p>التدفقات الداخلة: {cash.inflow} YER</p>
+          <p>التدفقات الخارجة: {cash.outflow} YER</p>
+          <p>الصافي: {cash.net} YER</p>
+        </div>
+      </div>
+      <DataTable
+        data={trial.rows.map((row, idx) => ({
+          id: `${row.id}-r-${idx}`,
+          account: row.account.name,
+          debit: row.debit,
+          credit: row.credit
+        }))}
+        columns={[
+          { key: 'account', label: 'الحساب' },
+          { key: 'debit', label: 'مدين' },
+          { key: 'credit', label: 'دائن' }
+        ]}
+        fileName="trial-balance"
+      />
       <PDFButton
         label="PDF الدخل الشهري"
         onGenerate={() => {
-          const doc = generateMonthlyIncomePdf(monthlyRows);
-          doc.save('monthly-income.pdf');
+          const rows = trial.rows.map((row) => ({ account: row.account.name, debit: row.debit, credit: row.credit }));
+          const doc = generateMonthlyIncomePdf(rows as any);
+          doc.save('financials.pdf');
         }}
       />
+      <button onClick={exportPack} style={{ padding: '10px 14px', borderRadius: 12, border: 'none', background: '#2563eb', color: '#fff' }}>
+        تصدير JSON للقوائم المالية
+      </button>
     </div>
   );
 }
@@ -1088,7 +1255,7 @@ export default function App() {
       {view === 'inventory' && <InventoryView version={version} refresh={refresh} onToast={onToast} />}
       {view === 'lab' && <LabOrdersView version={version} refresh={refresh} onToast={onToast} />}
       {view === 'suppliers' && <SuppliersView version={version} refresh={refresh} onToast={onToast} />}
-      {view === 'accounting' && <AccountingView version={version} />}
+      {view === 'accounting' && <AccountingView version={version} refresh={refresh} onToast={showToast} />}
       {view === 'reports' && <ReportsView version={version} />}
       {view === 'settings' && <SettingsView version={version} refresh={refresh} onToast={onToast} />}
       {view === 'audit' && <AuditView version={version} />}

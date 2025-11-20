@@ -1,4 +1,23 @@
-import { Appointment, AuditLogEntry, BackupPayload, Doctor, InventoryBatch, InventoryItem, Invoice, LabOrder, LedgerEntry, Patient, PatientTooth, PaymentVoucher, Receipt, Session, Supplier, ToothStatus } from '../models';
+import {
+  Account,
+  Appointment,
+  AuditLogEntry,
+  BackupPayload,
+  Doctor,
+  InventoryBatch,
+  InventoryItem,
+  Invoice,
+  JournalEntry,
+  LabOrder,
+  LedgerEntry,
+  Patient,
+  PatientTooth,
+  PaymentVoucher,
+  Receipt,
+  Session,
+  Supplier,
+  ToothStatus
+} from '../models';
 import * as seed from '../data/seed';
 
 export interface DatabaseSnapshot extends BackupPayload {}
@@ -18,6 +37,8 @@ type EntityMap = {
   inventoryBatches: InventoryBatch[];
   labOrders: LabOrder[];
   ledger: LedgerEntry[];
+  accounts: Account[];
+  journalEntries: JournalEntry[];
   auditLog: AuditLogEntry[];
 };
 
@@ -40,6 +61,8 @@ export class InMemoryDatabase {
       inventoryBatches: seed.inventoryBatches,
       labOrders: seed.labOrders,
       ledger: seed.ledger,
+      accounts: seed.accounts,
+      journalEntries: seed.journalEntries,
       auditLog: [],
       ...initialData
     } as EntityMap;

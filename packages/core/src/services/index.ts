@@ -1,5 +1,6 @@
 export * from './auditService';
 export * from './backupService';
+export * from './accountingService';
 export * from './patientService';
 export * from './sessionService';
 export * from './invoiceService';

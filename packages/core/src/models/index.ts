@@ -3,6 +3,7 @@ export type AppointmentStatus = 'scheduled' | 'checked-in' | 'completed' | 'canc
 export type InvoiceStatus = 'draft' | 'partial' | 'paid' | 'void';
 export type LabOrderStatus = 'pending' | 'sent' | 'received' | 'delivered';
 export type LedgerDirection = 'in' | 'out';
+export type AccountType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' | 'contra-asset';
 
 export interface Doctor {
   id: string;
@@ -125,6 +126,7 @@ export interface InventoryBatch {
   qtyIn: number;
   qtyOut: number;
   costYer: number;
+  supplierId?: string;
   createdAt: string;
 }
 
@@ -151,6 +153,36 @@ export interface LedgerEntry {
   note?: string;
 }
 
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  parentId?: string;
+  isActive: boolean;
+}
+
+export interface JournalLine {
+  id: string;
+  accountId: string;
+  debitYer: number;
+  creditYer: number;
+  memo?: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  memo: string;
+  source: string;
+  refId?: string;
+  period: string;
+  postedBy: string;
+  createdAt: string;
+  lines: JournalLine[];
+  closingTag?: 'month' | 'year';
+}
+
 export interface AuditLogEntry {
   id: string;
   ts: string;
@@ -174,6 +206,8 @@ export interface BackupPayload {
   inventoryBatches: InventoryBatch[];
   labOrders: LabOrder[];
   ledger: LedgerEntry[];
+  accounts: Account[];
+  journalEntries: JournalEntry[];
   auditLog: AuditLogEntry[];
   toothStatuses: ToothStatus[];
   patientTeeth: PatientTooth[];

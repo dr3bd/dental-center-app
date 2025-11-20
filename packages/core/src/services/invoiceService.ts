@@ -2,6 +2,7 @@ import { Invoice, Session } from '../models';
 import { db } from '../repositories/inMemoryDatabase';
 import { ensureYer } from '../utils/currency';
 import { auditService } from './auditService';
+import { accountingService } from './accountingService';
 
 export class InvoiceService {
   createFromSession(session: Session) {
@@ -16,6 +17,9 @@ export class InvoiceService {
       notes: 'تم إنشاؤها من الجلسة'
     };
     db.table('invoices').push(invoice);
+    const doctor = db.table('doctors').find((doc) => doc.id === session.doctorId);
+    const doctorShare = doctor ? Math.round(invoice.totalYer * (doctor.revenueSharePercent / 100)) : 0;
+    accountingService.postInvoice(invoice.id, invoice.totalYer, doctorShare);
     auditService.log('system', 'create', 'invoice', invoice.id, invoice);
     return invoice;
   }

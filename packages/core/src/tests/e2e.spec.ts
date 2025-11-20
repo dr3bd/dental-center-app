@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  accountingService,
   cashboxService,
   db,
   inventoryService,
@@ -14,7 +15,7 @@ describe('E2E flows', () => {
     db.reset();
   });
 
-  it('completes the session → invoice → receipt flow and updates ledger', () => {
+  it('completes the session → invoice → receipt flow and keeps trial balance aligned', () => {
     const patient = patientService.create({
       fullNameAr: 'مريض E2E',
       fullNameEn: 'Patient E2E',
@@ -44,10 +45,12 @@ describe('E2E flows', () => {
       method: 'cash',
       createdBy: 'manager'
     });
-    const ledger = db.table('ledger');
     const updatedInvoice = invoiceService.getByPatient(patient.id)[0];
     expect(updatedInvoice.status).toBe('paid');
-    expect(ledger.some((entry) => entry.refId === invoice.id && entry.direction === 'in')).toBe(true);
+    const trial = accountingService.trialBalance();
+    expect(trial.balanced).toBe(true);
+    const gl = accountingService.generalLedger();
+    expect(gl.find((row) => row.account.id === 'acc-1000')?.lines.length).toBeGreaterThan(0);
   });
 
   it('flags expiring inventory after adding batches that near expiry', () => {
