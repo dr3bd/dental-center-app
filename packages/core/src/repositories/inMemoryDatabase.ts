@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import {
   Account,
   Appointment,
@@ -44,8 +46,11 @@ type EntityMap = {
 
 export class InMemoryDatabase {
   private data: EntityMap;
+  private storagePath: string | null;
 
   constructor(initialData?: Partial<EntityMap>) {
+    this.storagePath = this.resolveStoragePath();
+    const snapshot = this.loadSnapshotFromStorage();
     this.data = {
       doctors: seed.doctors,
       patients: seed.patients,
@@ -64,8 +69,10 @@ export class InMemoryDatabase {
       accounts: seed.accounts,
       journalEntries: seed.journalEntries,
       auditLog: [],
-      ...initialData
+      ...initialData,
+      ...snapshot
     } as EntityMap;
+    this.persist();
   }
 
   table<K extends keyof EntityMap>(key: K): EntityMap[K] {
@@ -80,10 +87,12 @@ export class InMemoryDatabase {
     } else {
       list.push(entity as any);
     }
+    this.persist();
   }
 
   remove<K extends keyof EntityMap>(key: K, matcher: (item: EntityMap[K][number]) => boolean) {
     this.data[key] = this.data[key].filter((item) => !matcher(item)) as EntityMap[K];
+    this.persist();
   }
 
   snapshot(): DatabaseSnapshot {
@@ -95,6 +104,41 @@ export class InMemoryDatabase {
       this.data = JSON.parse(JSON.stringify(snapshot));
     } else {
       this.data = new InMemoryDatabase().snapshot();
+    }
+    this.persist();
+  }
+
+  private resolveStoragePath(): string | null {
+    if (typeof window !== 'undefined') {
+      return null; // the PWA uses browser storage; skip FS writes here
+    }
+    const base = process.env.DATA_DIR || join(process.cwd(), 'data');
+    const path = join(base, 'clinic-db.json');
+    mkdirSync(base, { recursive: true });
+    return path;
+  }
+
+  private loadSnapshotFromStorage(): Partial<EntityMap> {
+    if (!this.storagePath) return {};
+    if (!existsSync(this.storagePath)) return {};
+    try {
+      const raw = readFileSync(this.storagePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      return parsed as Partial<EntityMap>;
+    } catch (err) {
+      console.warn('Failed to load persisted database, using seed instead', err);
+      return {};
+    }
+  }
+
+  private persist() {
+    if (this.storagePath) {
+      const snapshot = JSON.stringify(this.data, null, 2);
+      writeFileSync(this.storagePath, snapshot, 'utf-8');
+    }
+    if (typeof window !== 'undefined' && window?.localStorage) {
+      const snapshot = JSON.stringify(this.data);
+      window.localStorage.setItem('clinic-db', snapshot);
     }
   }
 }
