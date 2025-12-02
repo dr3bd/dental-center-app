@@ -1,26 +1,36 @@
 :root {
   --brand-600: #0f766e;
+  --brand-500: #14b8a6;
   --brand-300: #5eead4;
   --surface: #0b141a;
   --surface-alt: #111b21;
   --surface-light: #f9fafb;
+  --card-surface: linear-gradient(145deg, #ffffff 0%, #f0f9ff 50%, #eff6ff 100%);
   --text-strong: #0b0f19;
   --radius-12: 12px;
   --gap-12: 12px;
   --gap-24: 24px;
-  --shadow-card: 0 10px 30px rgba(15, 118, 110, 0.1);
+  --shadow-card: 0 14px 40px rgba(15, 118, 110, 0.14);
+  --layout-gradient: radial-gradient(circle at 10% 20%, rgba(94, 234, 212, 0.25) 0, transparent 26%),
+    radial-gradient(circle at 90% 10%, rgba(20, 184, 166, 0.22) 0, transparent 22%),
+    linear-gradient(120deg, #f8fafc 0%, #f4f8fb 40%, #edf3ff 100%);
 }
 
 [data-theme='dark'] {
   --surface: #050a0e;
   --surface-alt: #0f1419;
-  --surface-light: #111827;
+  --surface-light: #0b1220;
+  --card-surface: linear-gradient(145deg, #0b1220 0%, #0f172a 50%, #0b111f 100%);
   --text-strong: #f8fafc;
+  --shadow-card: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --layout-gradient: radial-gradient(circle at 10% 20%, rgba(94, 234, 212, 0.16) 0, transparent 26%),
+    radial-gradient(circle at 90% 10%, rgba(20, 184, 166, 0.18) 0, transparent 22%),
+    linear-gradient(120deg, #0b1220 0%, #0a1020 40%, #060b18 100%);
 }
 
 body {
   font-family: 'Cairo', 'Segoe UI', system-ui;
-  background: var(--surface-light);
+  background: var(--layout-gradient);
   color: var(--text-strong);
   transition: background 0.3s ease, color 0.3s ease;
 }

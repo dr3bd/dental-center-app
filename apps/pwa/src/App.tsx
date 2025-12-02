@@ -65,8 +65,21 @@ function DashboardView({ version }: SimpleProps) {
   const netCosts = useMemo(() => reportService.netAfterLabAndMaterials(), [version]);
   const aging = summary.invoiceAging;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+    <div className="dashboard-grid">
+      <div className="hero-band">
+        <p className="hero-band__title">مرحبًا بك في مركز د. عبدالغني البسمي</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <h2 style={{ margin: 0 }}>لوحة تحكم ذكية وديناميكية</h2>
+          <Tag>تحديث لحظي للإيرادات والزيارات</Tag>
+        </div>
+        <div className="hero-badges">
+          <span className="hero-badge">💸 غير محصّل: {aging.unpaidTotal} YER</span>
+          <span className="hero-badge">🗓 مواعيد اليوم: {summary.appointmentsToday.length}</span>
+          <span className="hero-badge">📦 مواد حرجة: {summary.expiringBatches.length}</span>
+          <span className="hero-badge">👥 مرضى جدد: {summary.newPatients}</span>
+        </div>
+      </div>
+      <div className="section-grid">
         <KPIWidget label="دخل اليوم" value={`${summary.incomeToday} YER`} />
         <KPIWidget label="دخل الأسبوع" value={`${summary.incomeThisWeek} YER`} />
         <KPIWidget label="مرضى جدد هذا الأسبوع" value={summary.newPatients.toString()} />
@@ -1041,9 +1054,10 @@ function AuditView({ version }: SimpleProps) {
 
 const cardStyle = {
   borderRadius: '20px',
-  boxShadow: '0 10px 30px rgba(15, 118, 110, 0.1)',
-  background: 'var(--surface-light, #fff)',
-  color: 'var(--text-strong, #0f172a)'
+  boxShadow: 'var(--shadow-card, 0 10px 30px rgba(15, 118, 110, 0.1))',
+  background: 'var(--card-surface, #fff)',
+  color: 'var(--text-strong, #0f172a)',
+  border: '1px solid rgba(15, 118, 110, 0.08)'
 };
 
 export default function App() {

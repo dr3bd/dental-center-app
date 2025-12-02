@@ -11,7 +11,8 @@ export { AppShell };
 const cardStyle: CSSProperties = {
   borderRadius: '20px',
   boxShadow: 'var(--shadow-card)',
-  background: '#fff'
+  background: 'var(--card-surface)',
+  border: '1px solid rgba(15, 118, 110, 0.07)'
 };
 
 export interface DataTableColumn<T> {
