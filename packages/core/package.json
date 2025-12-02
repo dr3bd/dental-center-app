@@ -1,0 +1,23 @@
+{
+  "name": "@dental-center/core",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "dexie": "4.0.8",
+    "i18next": "23.11.5",
+    "lodash.merge": "4.6.2",
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.8.2"
+  },
+  "devDependencies": {
+    "@types/lodash.merge": "4.6.9",
+    "ts-node": "10.9.2",
+    "tslib": "2.6.3",
+    "vitest": "1.6.0"
+  }
+}

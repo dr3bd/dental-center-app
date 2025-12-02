@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+:root {
+  font-family: 'Cairo', system-ui;
+  color: var(--app-text, #0f172a);
+  background-color: var(--app-bg, #f5f7fb);
+  --app-bg: #f5f7fb;
+  --app-text: #0f172a;
+}
+
+[data-theme='dark'] {
+  --app-bg: #020617;
+  --app-text: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.hero-band {
+  background: linear-gradient(120deg, rgba(20, 184, 166, 0.12), rgba(94, 234, 212, 0.08));
+  border: 1px solid rgba(20, 184, 166, 0.18);
+  border-radius: 22px;
+  padding: 18px 20px;
+  box-shadow: 0 20px 60px rgba(5, 90, 80, 0.18);
+}
+
+.hero-band__title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.hero-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.hero-badge {
+  background: rgba(255, 255, 255, 0.85);
+  color: #0f172a;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  font-size: 0.9rem;
+}
+
+.dashboard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
